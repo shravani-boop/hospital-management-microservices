@@ -1,10 +1,30 @@
 const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
 
 const app = express();
 
+app.use(cors());
 app.use(express.json());
 
+
 const PORT = 3003;
+
+// MongoDB connection
+mongoose.connect("mongodb://mongodb:27017/hospital")
+    .then(() => console.log("Connected to MongoDB"))
+    .catch(err => console.error("MongoDB connection error:", err));
+
+// Appointment schema
+const appointmentSchema = new mongoose.Schema({
+    patientId: String,
+    doctorId: String,
+    date: String,
+    time: String,
+    status: String
+});
+
+const Appointment = mongoose.model("Appointment", appointmentSchema);
 
 // Health check
 app.get("/health", (req, res) => {
@@ -15,25 +35,24 @@ app.get("/health", (req, res) => {
 });
 
 // Get appointments
-app.get("/appointments", (req, res) => {
-    res.json([
-        {
-            id: 1,
-            patientId: 1,
-            doctorId: 1,
-            date: "2026-09-25",
-            time: "10:00 AM",
-            status: "Scheduled"
-        },
-        {
-            id: 2,
-            patientId: 2,
-            doctorId: 2,
-            date: "2026-09-26",
-            time: "02:00 PM",
-            status: "Scheduled"
-        }
-    ]);
+app.get("/appointments", async (req, res) => {
+    try {
+        const appointments = await Appointment.find();
+        res.json(appointments);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch appointments" });
+    }
+});
+
+// Add appointment
+app.post("/appointments", async (req, res) => {
+    try {
+        const appointment = new Appointment(req.body);
+        const savedAppointment = await appointment.save();
+        res.status(201).json(savedAppointment);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to add appointment" });
+    }
 });
 
 app.listen(PORT, "0.0.0.0", () => {
